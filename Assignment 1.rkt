@@ -1,27 +1,33 @@
 #lang racket
+
 (define (count-frequencies lst)
   (define (count-helper lst freq-table)
     (cond
       [(empty? lst) freq-table]
       [(hash-has-key? freq-table (first lst))
        (count-helper (rest lst) (hash-update freq-table (first lst) add1))]
-      [else (count-helper (rest lst) (hash-set freq-table (first lst) 1))]))
-  ; Return a hash table with frequencies of each element
-  (count-helper lst (make-immutable-hash)))
+      [else (count-helper (rest lst) (hash-set freq-table (first lst) 1))])) ; Set frequency
+  (count-helper lst (make-immutable-hash))) ; Use immutable hash table
 
-(define (generate-sorted-list freq-table)
-  (define (generate-helper keys)
+(define (generate-sorted-list freq-table min-val max-val)
+  (define (generate-helper current-val result)
     (cond
-      [(empty? keys) '()]
+      [(> current-val max-val) result] ; Base case: finished
       [else
-       (define key (first keys))
-       (define count (hash-ref freq-table key))
-       (append (make-list count key) (generate-helper (rest keys)))]))
-  (generate-helper (sort (hash-keys freq-table) <))) ; Sort the keys manually
+       (define count (hash-ref freq-table current-val 0)) ; Get count, default to 0
+       (if (> count 0)  ; Only add if count is greater than zero
+           (generate-helper (+ current-val 1) 
+                            (append (make-list count current-val) result)) ; Construct directly
+           (generate-helper (+ current-val 1) result))])) ; Skip adding if count is zero
+  (reverse (generate-helper min-val '()))) ; Start with empty list
 
 (define (counting-sort lst)
-  (define freq-table (count-frequencies lst))
-  (generate-sorted-list freq-table))
+  (if (empty? lst)
+      '()  ; Return empty if input is empty
+      (let* ([freq-table (count-frequencies lst)]
+             [min-val (apply min lst)]
+             [max-val (apply max lst)])
+        (generate-sorted-list freq-table min-val max-val))))  ; Generate the sorted list
 
 ; Function to read integers from a file and convert them to a list
 (define (read-integers-from-file filename)
